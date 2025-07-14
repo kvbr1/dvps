@@ -8,17 +8,13 @@ pool:
 
 variables:
   PYTHON_VERSION: '3.11'
-  #SONARQUBE_SERVICE_CONNECTION: 'your-sonarqube-service-connection'
+  SONARQUBE_SERVICE_CONNECTION: 'test-sonarqube-self-repo'
   SONARQUBE_PROJECT_KEY: 'test-self-repo'
   SONARQUBE_PROJECT_NAME: 'test-self-repo'
 
 steps:
   - checkout: self
 
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(PYTHON_VERSION)'
-    displayName: 'Use Python $(PYTHON_VERSION)'
 
   - task: JavaToolInstaller@1
     inputs:
@@ -27,10 +23,7 @@ steps:
       jdkSourceOption: 'PreInstalled'
     displayName: 'Install JDK (required for SonarQube)'
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install Python dependencies'
+
 
   - task: SonarQubePrepare@5
     inputs:
