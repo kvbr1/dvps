@@ -1,7 +1,8 @@
 trigger:
   branches:
     include:
-      - kvbr1-patch-1  # Change to your branch name
+     # - kvbr1-patch-1  # Change to your branch name
+      - main
 
 pool:
   vmImage: 'ubuntu-latest'
