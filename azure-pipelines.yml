@@ -11,11 +11,10 @@ pool:
 variables:
   AZURE_WEBAPP_PACKAGE_PATH: '.'  # Path to the web app project
   ARTIFACT_NAME: 'backend-artifact'   # Name of the artifact
-#  AZURE_WEBAPP_NAME: 'genai-copilot-mmp-dev' # Your Azure Web App name
   PYTHON_VERSION: '3.11'  # Python version
-#  SONARQUBE_SERVICE_CONNECTION: 'wu-sonarqube'  # Replace with your SonarQube service connection name
-  SONARQUBE_PROJECT_KEY: 'testing-branching-stratergy'  # Replace with your SonarQube project key
-  SONARQUBE_PROJECT_NAME: 'testing-branching-stratergy' # Replace with your SonarQube project name
+  SONARQUBE_SERVICE_CONNECTION: 'wu-sonarqube'  # Replace with your actual SonarQube service connection name
+  SONARQUBE_PROJECT_KEY: 'test-self-repo'  # Replace with your SonarQube project key
+  SONARQUBE_PROJECT_NAME: 'test-self-repo' # Replace with your SonarQube project name
 
 stages:
   - stage: Build
@@ -30,7 +29,7 @@ stages:
             versionSpec: '$(PYTHON_VERSION)'
           displayName: 'Set up Python $(PYTHON_VERSION)'
       
-        # SonarQube Analysis Steps
+        # Install Java (for SonarQube CLI)
         - task: JavaToolInstaller@1
           inputs:
             versionSpec: '17'
@@ -38,7 +37,8 @@ stages:
             jdkSourceOption: 'PreInstalled'
           displayName: 'Install JDK 17'
 
-        - task: SonarQubePrepare@7
+        # Prepare SonarQube analysis
+        - task: SonarQubePrepare@5
           inputs:
             SonarQube: '$(SONARQUBE_SERVICE_CONNECTION)'
             scannerMode: 'CLI'
@@ -47,11 +47,21 @@ stages:
             cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
             cliSources: '$(AZURE_WEBAPP_PACKAGE_PATH)'
 
+        # Install Python dependencies
         - script: |
             python -m pip install --upgrade pip
             pip install -r $(AZURE_WEBAPP_PACKAGE_PATH)/requirements.txt
           displayName: 'Install dependencies for backend'
 
+        # Run SonarQube code analysis
+        - task: SonarQubeAnalyze@5
+
+        # Publish SonarQube results
+        - task: SonarQubePublish@5
+          inputs:
+            pollingTimeoutSec: '300'
+
+        # Archive source files
         - task: ArchiveFiles@2
           displayName: 'Archive files'
           inputs:
@@ -61,12 +71,7 @@ stages:
             archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
             replaceExistingArchive: true
 
-      
-          
-        - task: SonarQubePublish@7
-          inputs:
-            pollingTimeoutSec: '300'
-
+        # Publish artifact
         - task: PublishBuildArtifacts@1
           inputs:
             PathtoPublish: '$(Build.ArtifactStagingDirectory)'
