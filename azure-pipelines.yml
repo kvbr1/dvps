@@ -1,0 +1,77 @@
+name: Dev_Backend_$(date:yyyyMMdd)$(rev:.r)
+
+trigger: 
+  branches:
+    include:
+      - kvbr1-patch-1 # Trigger only on this branch
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  AZURE_WEBAPP_PACKAGE_PATH: '.'  # Path to the web app project
+  ARTIFACT_NAME: 'backend-artifact'   # Name of the artifact
+#  AZURE_WEBAPP_NAME: 'genai-copilot-mmp-dev' # Your Azure Web App name
+  PYTHON_VERSION: '3.11'  # Python version
+#  SONARQUBE_SERVICE_CONNECTION: 'wu-sonarqube'  # Replace with your SonarQube service connection name
+  SONARQUBE_PROJECT_KEY: 'testing-branching-stratergy'  # Replace with your SonarQube project key
+  SONARQUBE_PROJECT_NAME: 'testing-branching-stratergy' # Replace with your SonarQube project name
+
+stages:
+  - stage: Build
+    jobs:
+    - job: Build
+      steps:
+        - checkout: self
+          persistCredentials: true
+
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '$(PYTHON_VERSION)'
+          displayName: 'Set up Python $(PYTHON_VERSION)'
+      
+        # SonarQube Analysis Steps
+        - task: JavaToolInstaller@1
+          inputs:
+            versionSpec: '17'
+            jdkArchitectureOption: 'x64'
+            jdkSourceOption: 'PreInstalled'
+          displayName: 'Install JDK 17'
+
+        - task: SonarQubePrepare@7
+          inputs:
+            SonarQube: '$(SONARQUBE_SERVICE_CONNECTION)'
+            scannerMode: 'CLI'
+            configMode: 'manual'
+            cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
+            cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
+            cliSources: '$(AZURE_WEBAPP_PACKAGE_PATH)'
+
+        - script: |
+            python -m pip install --upgrade pip
+            pip install -r $(AZURE_WEBAPP_PACKAGE_PATH)/requirements.txt
+          displayName: 'Install dependencies for backend'
+
+        - task: ArchiveFiles@2
+          displayName: 'Archive files'
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/$(AZURE_WEBAPP_PACKAGE_PATH)
+            includeRootFolder: false
+            archiveType: zip
+            archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+            replaceExistingArchive: true
+
+        - task: SonarQubeAnalyze@7
+          inputs:
+            jdkversion: 'JAVA_HOME_17_X64'
+          
+        - task: SonarQubePublish@7
+          inputs:
+            pollingTimeoutSec: '300'
+
+        - task: PublishBuildArtifacts@1
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: '$(ARTIFACT_NAME)'
+            publishLocation: 'Container'
+          displayName: 'Publish Artifact'
