@@ -61,9 +61,7 @@ stages:
             archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
             replaceExistingArchive: true
 
-        - task: SonarQubeAnalyze@7
-          inputs:
-            jdkversion: 'JAVA_HOME_17_X64'
+      
           
         - task: SonarQubePublish@7
           inputs:
