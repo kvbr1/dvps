@@ -1,80 +1,50 @@
-name: Dev_Backend_$(date:yyyyMMdd)$(rev:.r)
-
-trigger: 
+trigger:
   branches:
     include:
-      - kvbr1-patch-1 # Trigger only on this branch
+      - kvbr1-patch-1  # Change to your branch name
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  AZURE_WEBAPP_PACKAGE_PATH: '.'  # Path to the web app project
-  ARTIFACT_NAME: 'backend-artifact'   # Name of the artifact
-  PYTHON_VERSION: '3.11'  # Python version
-  SONARQUBE_SERVICE_CONNECTION: 'wu-sonarqube'  # Replace with your actual SonarQube service connection name
-  SONARQUBE_PROJECT_KEY: 'test-self-repo'  # Replace with your SonarQube project key
-  SONARQUBE_PROJECT_NAME: 'test-self-repo' # Replace with your SonarQube project name
+  PYTHON_VERSION: '3.11'
+  #SONARQUBE_SERVICE_CONNECTION: 'your-sonarqube-service-connection'
+  SONARQUBE_PROJECT_KEY: 'test-self-repo'
+  SONARQUBE_PROJECT_NAME: 'test-self-repo'
 
-stages:
-  - stage: Build
-    jobs:
-    - job: Build
-      steps:
-        - checkout: self
-          persistCredentials: true
+steps:
+  - checkout: self
 
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '$(PYTHON_VERSION)'
-          displayName: 'Set up Python $(PYTHON_VERSION)'
-      
-        # Install Java (for SonarQube CLI)
-        - task: JavaToolInstaller@1
-          inputs:
-            versionSpec: '17'
-            jdkArchitectureOption: 'x64'
-            jdkSourceOption: 'PreInstalled'
-          displayName: 'Install JDK 17'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(PYTHON_VERSION)'
+    displayName: 'Use Python $(PYTHON_VERSION)'
 
-        # Prepare SonarQube analysis
-        - task: SonarQubePrepare@5
-          inputs:
-            SonarQube: '$(SONARQUBE_SERVICE_CONNECTION)'
-            scannerMode: 'CLI'
-            configMode: 'manual'
-            cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
-            cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
-            cliSources: '$(AZURE_WEBAPP_PACKAGE_PATH)'
+  - task: JavaToolInstaller@1
+    inputs:
+      versionSpec: '17'
+      jdkArchitectureOption: 'x64'
+      jdkSourceOption: 'PreInstalled'
+    displayName: 'Install JDK (required for SonarQube)'
 
-        # Install Python dependencies
-        - script: |
-            python -m pip install --upgrade pip
-            pip install -r $(AZURE_WEBAPP_PACKAGE_PATH)/requirements.txt
-          displayName: 'Install dependencies for backend'
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: 'Install Python dependencies'
 
-        # Run SonarQube code analysis
-        - task: SonarQubeAnalyze@5
+  - task: SonarQubePrepare@5
+    inputs:
+      SonarQube: '$(SONARQUBE_SERVICE_CONNECTION)'
+      scannerMode: 'CLI'
+      configMode: 'manual'
+      cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
+      cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
+      cliSources: '.'
 
-        # Publish SonarQube results
-        - task: SonarQubePublish@5
-          inputs:
-            pollingTimeoutSec: '300'
+  - task: SonarQubeAnalyze@5
+    displayName: 'Run SonarQube Analysis'
 
-        # Archive source files
-        - task: ArchiveFiles@2
-          displayName: 'Archive files'
-          inputs:
-            rootFolderOrFile: $(System.DefaultWorkingDirectory)/$(AZURE_WEBAPP_PACKAGE_PATH)
-            includeRootFolder: false
-            archiveType: zip
-            archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-            replaceExistingArchive: true
-
-        # Publish artifact
-        - task: PublishBuildArtifacts@1
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-            ArtifactName: '$(ARTIFACT_NAME)'
-            publishLocation: 'Container'
-          displayName: 'Publish Artifact'
+  - task: SonarQubePublish@5
+    inputs:
+      pollingTimeoutSec: '300'
+    displayName: 'Publish SonarQube Report'
