@@ -13,7 +13,7 @@ variables:
   SONARQUBE_PROJECT_NAME: 'test-self-repo'
 
 steps:
-  - checkout: self
+  #- checkout: self
 
  # - task: UsePythonVersion@0
  #   inputs:
