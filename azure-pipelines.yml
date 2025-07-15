@@ -15,15 +15,15 @@ variables:
 steps:
   - checkout: self
 
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(PYTHON_VERSION)'
-    displayName: 'Set Python Version'
+ # - task: UsePythonVersion@0
+ #   inputs:
+ #    versionSpec: '$(PYTHON_VERSION)'
+#    displayName: 'Set Python Version'
 
-  - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install Python Dependencies'
+#  - script: |
+ #     python -m pip install --upgrade pip
+ #     pip install -r requirements.txt
+  #  displayName: 'Install Python Dependencies'
 
   - script: |
       sudo apt-get update
