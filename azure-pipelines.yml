@@ -1,44 +1,47 @@
 trigger:
   branches:
     include:
-     # - kvbr1-patch-1  # Change to your branch name
-      - main
+      - kvbr1-patch-1  # Replace with your working branch
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
   PYTHON_VERSION: '3.11'
-  SONARQUBE_SERVICE_CONNECTION: 'test-sonarqube-self-repo'
+  SONARQUBE_HOST_URL: 'http://20.185.151.89:9000/'  # 🔁 Replace with your SonarQube URL
   SONARQUBE_PROJECT_KEY: 'test-self-repo'
   SONARQUBE_PROJECT_NAME: 'test-self-repo'
 
 steps:
   - checkout: self
 
-
-  - task: JavaToolInstaller@1
+  - task: UsePythonVersion@0
     inputs:
-      versionSpec: '17'
-      jdkArchitectureOption: 'x64'
-      jdkSourceOption: 'PreInstalled'
-    displayName: 'Install JDK (required for SonarQube)'
+      versionSpec: '$(PYTHON_VERSION)'
+    displayName: 'Set Python Version'
 
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: 'Install Python Dependencies'
 
+  - script: |
+      sudo apt-get update
+      sudo apt-get install -y openjdk-17-jdk unzip wget
+    displayName: 'Install Java (for SonarQube CLI)'
 
-  - task: SonarQubePrepare@5
-    inputs:
-      SonarQube: '$(SONARQUBE_SERVICE_CONNECTION)'
-      scannerMode: 'CLI'
-      configMode: 'manual'
-      cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
-      cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
-      cliSources: '.'
+  - script: |
+      wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+      unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+      export PATH=$(pwd)/sonar-scanner-5.0.1.3006-linux/bin:$PATH
 
-  - task: SonarQubeAnalyze@5
-    displayName: 'Run SonarQube Analysis'
-
-  - task: SonarQubePublish@5
-    inputs:
-      pollingTimeoutSec: '300'
-    displayName: 'Publish SonarQube Report'
+      sonar-scanner \
+        -Dsonar.projectKey=$(SONARQUBE_PROJECT_KEY) \
+        -Dsonar.projectName=$(SONARQUBE_PROJECT_NAME) \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=$(SONARQUBE_HOST_URL) \
+        -Dsonar.login=$(SONAR_TOKEN) \
+        -Dsonar.branch.name=$(Build.SourceBranchName)
+    env:
+      SONAR_TOKEN: $(SONAR_TOKEN)  # 🔐 Store this in Azure DevOps as a secret variable
+    displayName: 'Run SonarQube Scan via CLI'
