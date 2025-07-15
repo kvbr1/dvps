@@ -1,0 +1,44 @@
+trigger:
+  branches:
+    include:
+      - kvbr1-patch-2  # Change to your branch name
+     # - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  PYTHON_VERSION: '3.11'
+  SONARQUBE_SERVICE_CONNECTION: 'test-sonarqube-self-repo'
+  SONARQUBE_PROJECT_KEY: 'test-patch2'
+  SONARQUBE_PROJECT_NAME: 'test-patch2'
+
+steps:
+  - checkout: self
+
+
+  - task: JavaToolInstaller@1
+    inputs:
+      versionSpec: '17'
+      jdkArchitectureOption: 'x64'
+      jdkSourceOption: 'PreInstalled'
+    displayName: 'Install JDK (required for SonarQube)'
+
+
+
+  - task: SonarQubePrepare@5
+    inputs:
+      SonarQube: '$(SONARQUBE_SERVICE_CONNECTION)'
+      scannerMode: 'CLI'
+      configMode: 'manual'
+      cliProjectKey: '$(SONARQUBE_PROJECT_KEY)'
+      cliProjectName: '$(SONARQUBE_PROJECT_NAME)'
+      cliSources: '.'
+
+  - task: SonarQubeAnalyze@5
+    displayName: 'Run SonarQube Analysis'
+
+  - task: SonarQubePublish@5
+    inputs:
+      pollingTimeoutSec: '300'
+    displayName: 'Publish SonarQube Report'
