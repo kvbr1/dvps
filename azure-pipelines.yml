@@ -32,7 +32,7 @@ steps:
 
   - script: |
       echo "Branch Name: $(Build.SourceBranchName)"
-      displayName: 'Show Current Branch Name'
+    displayName: 'Show Current Branch Name'
 
 
   - script: |
